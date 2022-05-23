@@ -1,0 +1,42 @@
+{
+    "exchanges": {
+        "posts_boundary_exchange": {
+            "name": "posts_boundary_exchange",
+            "type": "fanout",
+            "durable": false,
+            "auto_delete": false
+        },
+        "comments_boundary_exchange": {
+            "name": "comments_boundary_exchange",
+            "type": "fanout",
+            "durable": false,
+            "auto_delete": false
+        }
+    },
+    "queues": {
+        "incoming_posts_queue": {
+            "name": "incoming_posts_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true
+        },
+        "incoming_comments_queue": {
+            "name": "incoming_comments_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true
+        }
+    },
+    "ingestor": {
+        "post_send_exchange": "posts_boundary_exchange",
+        "post_send_queue": "incoming_posts_queue",
+        "comment_send_exchange": "comments_boundary_exchange",
+        "comment_send_queue": "incoming_comments_queue"
+    },
+    "filter_post_select_cols_and_drop_invalid": {
+        "recv_exchange": "posts_boundary_exchange",
+        "recv_queue": "incoming_posts_queue"
+    }
+}
