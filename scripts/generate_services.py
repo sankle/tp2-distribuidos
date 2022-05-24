@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import shutil
 
 SERVICES_DIRECTORY = "../.services"
@@ -9,7 +8,7 @@ ENTITY_IMPL_FILENAME = "entity.py"
 ENTITY_FILE_CONTAINER_DIR = "common/"
 
 # Relative from docker-compose-dev.yaml
-MIDDLEWARE_BASE_PATH_FROM_COMPOSE = "./entities/middleware"
+COMMON_BASE_PATH_FROM_COMPOSE = "./entities/common"
 ENTITIES_BASE_PATH_FROM_COMPOSE = "entities"
 SERVICES_BASE_PATH_FROM_COMPOSE = ".services"
 
@@ -17,8 +16,10 @@ MAKEFILE_PATH = "../Makefile"
 
 ENTITY_RELATIVE_PATHS = [
     # (relative_path, entity_name)
-    ("", "ingestor"),
-    ("filters", "filter_post_select_cols_and_drop_invalid")
+    ("ingestor", "ingestor"),
+    ("filters", "filter_posts"),
+    ("filters", "filter_comments"),
+    ("calculators", "calculator_post_avg_score")
 ]
 
 ENTITY_BASE_DOCKERFILE = """
@@ -26,7 +27,7 @@ ENTITY_BASE_DOCKERFILE = """
 
 FROM rabbitmq-python-base:0.0.1
 COPY <ENTITY_PATH_FROM_COMPOSE> /
-COPY <MIDDLEWARE_FROM_PATH> /middleware
+COPY <COMMON_PATH_FROM_COMPOSE> /common
 CMD /main.py
 """
 
@@ -39,7 +40,7 @@ PWD := $(shell pwd)
 default: build
 
 services:
-	cd $(PWD)/scripts && python3 generate_services.py
+	cd $(PWD)/scripts && python3 generate_docker_compose.py && python3 generate_services.py
 .PHONY: services
 
 images: services
@@ -112,18 +113,19 @@ class EntityParser:
         src_path_from_compose = "{}/{}".format(SERVICES_BASE_PATH_FROM_COMPOSE,
                                                entity_name)
         if relative_path != "":
-            src_path = "{}/{}/{}/{}".format(ENTITIES_BASE_PATH,
-                                            relative_path, entity_name, ENTITY_IMPL_FILENAME)
+            src_path = "{}/{}/{}.py".format(ENTITIES_BASE_PATH,
+                                            relative_path, entity_name)
         else:
-            src_path = "{}/{}/{}".format(ENTITIES_BASE_PATH,
-                                         entity_name, ENTITY_IMPL_FILENAME)
+            src_path = "{}/{}.py".format(ENTITIES_BASE_PATH,
+                                         entity_name)
 
-        dst_path = "{}/{}".format(entity_path, ENTITY_FILE_CONTAINER_DIR)
+        dst_path = "{}/{}/{}".format(entity_path,
+                                     ENTITY_FILE_CONTAINER_DIR, ENTITY_IMPL_FILENAME)
 
         shutil.copy2(src_path, dst_path)
 
         # Create entity Dockerfile
-        entity_dockerfile = ENTITY_BASE_DOCKERFILE.replace("<MIDDLEWARE_FROM_PATH>", MIDDLEWARE_BASE_PATH_FROM_COMPOSE) \
+        entity_dockerfile = ENTITY_BASE_DOCKERFILE.replace("<COMMON_PATH_FROM_COMPOSE>", COMMON_BASE_PATH_FROM_COMPOSE) \
             .replace("<ENTITY_PATH_FROM_COMPOSE>", src_path_from_compose)
 
         entity_dockerfile_filename = "{}/Dockerfile".format(entity_path)

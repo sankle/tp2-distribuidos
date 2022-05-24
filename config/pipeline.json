@@ -2,12 +2,42 @@
     "exchanges": {
         "posts_boundary_exchange": {
             "name": "posts_boundary_exchange",
-            "type": "fanout",
+            "strategy": {
+                "name": "round_robin"
+            },
+            "n_routing_keys": 3,
+            "type": "direct",
             "durable": false,
             "auto_delete": false
         },
         "comments_boundary_exchange": {
             "name": "comments_boundary_exchange",
+            "strategy": {
+                "name": "round_robin"
+            },
+            "n_routing_keys": 3,
+            "type": "direct",
+            "durable": false,
+            "auto_delete": false
+        },
+        "posts_filtered_exchange": {
+            "name": "posts_filtered_exchange",
+            "type": "fanout",
+            "durable": false,
+            "auto_delete": false
+        },
+        "comments_filtered_exchange": {
+            "name": "comments_filtered_exchange",
+            "strategy": {
+                "name": "affinity",
+                "based_on_attribute": "post_id"
+            },
+            "type": "direct",
+            "durable": false,
+            "auto_delete": false
+        },
+        "results_exchange": {
+            "name": "results_exchange",
             "type": "fanout",
             "durable": false,
             "auto_delete": false
@@ -19,24 +49,53 @@
             "durable": false,
             "exclusive": false,
             "auto_delete": false,
-            "auto_ack": true
+            "auto_ack": true,
+            "bind_to_exchange": "posts_boundary_exchange",
+            "scale_based_on_entity": "filter_posts"
         },
         "incoming_comments_queue": {
             "name": "incoming_comments_queue",
             "durable": false,
             "exclusive": false,
             "auto_delete": false,
-            "auto_ack": true
+            "auto_ack": true,
+            "bind_to_exchange": "comments_boundary_exchange",
+            "scale_based_on_entity": "filter_comments"
+        },
+        "results_queue": {
+            "name": "results_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "results_exchange"
+        },
+        "posts_total_avg_calculator_queue": {
+            "name": "posts_total_avg_calculator_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "posts_filtered_exchange"
         }
     },
     "ingestor": {
-        "post_send_exchange": "posts_boundary_exchange",
-        "post_send_queue": "incoming_posts_queue",
-        "comment_send_exchange": "comments_boundary_exchange",
-        "comment_send_queue": "incoming_comments_queue"
+        "send_posts_exchange": "posts_boundary_exchange",
+        "send_comments_exchange": "comments_boundary_exchange",
+        "recv_queue": "results_queue"
     },
-    "filter_post_select_cols_and_drop_invalid": {
-        "recv_exchange": "posts_boundary_exchange",
-        "recv_queue": "incoming_posts_queue"
+    "filter_posts": {
+        "recv_queue": "incoming_posts_queue",
+        "send_exchange": "posts_filtered_exchange",
+        "scale": 3
+    },
+    "filter_comments": {
+        "recv_queue": "incoming_comments_queue",
+        "send_exchange": "comments_filtered_exchange",
+        "scale": 3
+    },
+    "calculator_post_avg_score": {
+        "recv_queue": "posts_total_avg_calculator_queue",
+        "send_exchange": "results_exchange"
     }
 }

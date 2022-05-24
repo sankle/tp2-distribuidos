@@ -1,9 +1,10 @@
 import csv
-import json
 import logging
+import os
 import socket
 
-from middleware.middleware import Middleware
+from common.middleware.middleware import Middleware
+from common.constants import FINISH_PROCESSING_TYPE
 
 
 POSTS_FILE = '/posts.csv'
@@ -14,16 +15,35 @@ class Entity:
     def __init__(self, base_config, pipeline_config):
         server_config = base_config["server_config"]
         broker_config = base_config["broker_config"]
+        entity_name = base_config["entity_name"]
+        entity_config = pipeline_config[entity_name]
 
-        self._entity_name = base_config["entity_name"]
-        self._pipeline_config = pipeline_config
+        self.entity_name = entity_name
+
+        self._send_posts_exchange = pipeline_config[self.entity_name]["send_posts_exchange"]
+        self._send_comments_exchange = pipeline_config[self.entity_name]["send_comments_exchange"]
+
+        self._recv_queue_config = pipeline_config["queues"][entity_config["recv_queue"]]
 
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', server_config["port"]))
         self._server_socket.listen(server_config["listen_backlog"])
 
-        self._middleware = Middleware(broker_config, self)
+        self._middleware = Middleware(broker_config, pipeline_config)
+
+    def consume_callback(self, _ch, _method, _properties, input):
+        logging.info("[{}] Received result: {}".format(
+            self.entity_name, input))
+
+    def ingest_file(self, filename, exchange):
+        with open(filename, "r") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                self._middleware.send(exchange, row)
+
+            self._middleware.send_termination(exchange, {
+                "type": FINISH_PROCESSING_TYPE})
 
     def run(self):
         """
@@ -40,32 +60,11 @@ class Entity:
         #     client_sock = self.__accept_new_connection()
         #     self.__handle_client_connection(client_sock)
 
-        post_send_exchange_name = self._pipeline_config[self._entity_name]["post_send_exchange"]
-        comment_send_exchange_name = self._pipeline_config[self._entity_name]["comment_send_exchange"]
+        self.ingest_file(POSTS_FILE, self._send_posts_exchange)
+        self.ingest_file(COMMENTS_FILE, self._send_comments_exchange)
 
-        post_send_exchange_config = self._pipeline_config["exchanges"][post_send_exchange_name]
-        comment_send_exchange_config = self._pipeline_config["exchanges"][comment_send_exchange_name]
-
-        post_send_queue_name = self._pipeline_config[self._entity_name]["post_send_queue"]
-        comment_send_queue_name = self._pipeline_config[self._entity_name]["comment_send_queue"]
-
-        post_send_queue_config = self._pipeline_config["queues"][post_send_queue_name]
-        comment_send_queue_config = self._pipeline_config["queues"][comment_send_queue_name]
-
-        print("post_send_exchange_config: ", post_send_exchange_config)
-
-        self._middleware.create_ingestor(
-            post_send_exchange_config, post_send_queue_config)
-
-        self._middleware.create_ingestor(
-            comment_send_exchange_config, comment_send_queue_config)
-
-        with open(POSTS_FILE, "r") as posts_file:
-            reader = csv.DictReader(posts_file)
-            for post in reader:
-                self._middleware.send(post_send_exchange_name, post)
-
-        # Send comments
+        self._middleware.create_filter(
+            self._recv_queue_config, self.consume_callback)
 
     def __handle_client_connection(self, client_sock):
         """

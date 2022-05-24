@@ -22,19 +22,7 @@ def parse_base_config():
 
 def parse_pipeline_config(entity_name):
     with open(PIPELINE_CONFIG_FILE, 'r') as pipeline_config_file:
-        full_pipeline_config = json.load(pipeline_config_file)
-
-    logging.info("full_pipeline_config: {}".format(full_pipeline_config))
-
-    parsed_pipeline_config = {}
-
-    parsed_pipeline_config[entity_name] = full_pipeline_config[entity_name]
-
-    common_components = ["exchanges", "queues"]
-    for c in common_components:
-        parsed_pipeline_config[c] = full_pipeline_config[c]
-
-    logging.info("parsed_pipeline_config: {}".format(parsed_pipeline_config))
+        parsed_pipeline_config = json.load(pipeline_config_file)
 
     return parsed_pipeline_config
 

@@ -1,3 +1,6 @@
+
+# Generated automatically by generate_docker_compose.py
+
 version: '3'
 services:
   rabbitmq:
@@ -25,12 +28,15 @@ services:
     networks:
       - tp2-distribuidos-net
 
-  filter_post_select_cols_and_drop_invalid:
-    container_name: filter_post_select_cols_and_drop_invalid
-    image: filter_post_select_cols_and_drop_invalid:latest
+  
+
+  filter_posts_0:
+    container_name: filter_posts_0
+    image: filter_posts:latest
     entrypoint: python3 /main.py
     environment:
-      - ENTITY_NAME=filter_post_select_cols_and_drop_invalid
+      - ENTITY_NAME=filter_posts
+      - ENTITY_SUB_ID=0
     volumes:
       - ./config/config.json:/config.json
       - ./config/pipeline.json:/pipeline.json
@@ -38,6 +44,113 @@ services:
       - rabbitmq
     networks:
       - tp2-distribuidos-net
+
+
+
+  filter_posts_1:
+    container_name: filter_posts_1
+    image: filter_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_posts
+      - ENTITY_SUB_ID=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_posts_2:
+    container_name: filter_posts_2
+    image: filter_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_posts
+      - ENTITY_SUB_ID=2
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_comments_0:
+    container_name: filter_comments_0
+    image: filter_comments:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_comments
+      - ENTITY_SUB_ID=0
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_comments_1:
+    container_name: filter_comments_1
+    image: filter_comments:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_comments
+      - ENTITY_SUB_ID=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_comments_2:
+    container_name: filter_comments_2
+    image: filter_comments:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_comments
+      - ENTITY_SUB_ID=2
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  
+
+  
+
+  calculator_post_avg_score:
+    container_name: calculator_post_avg_score
+    image: calculator_post_avg_score:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=calculator_post_avg_score
+      - N_END_MESSAGES_EXPECTED=3
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
 
 
 networks:
