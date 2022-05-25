@@ -1,1 +1,8 @@
-FINISH_PROCESSING_TYPE = 'end'
+FINISH_PROCESSING_TYPE = "end"
+POST_TYPE = "post"
+COMMENT_TYPE = "comment"
+POST_WITH_MAX_AVG_SENTIMENT_TYPE = "post_with_max_avg_sentiment"
+STUDENT_LIKED_POST_WITH_SCORE_AVG_HIGHER_THAN_MEAN_TYPE = "student_liked_post_with_score_avg_higher_than_mean"
+COMMENT_WITH_POST_INFO_TYPE = "comment_with_post_info"
+POST_AVG_SENTIMENT_TYPE = "post_avg_sentiment"
+POST_AVG_SCORE_TYPE = "post_avg_score"

@@ -23,8 +23,8 @@ services:
       - N_END_MESSAGES_EXPECTED=5
       - PYTHONHASHSEED=1
     volumes:
-      - ./data/the-reddit-irl-dataset-comments.csv:/comments.csv
-      - ./data/the-reddit-irl-dataset-posts.csv:/posts.csv
+      - ./data/sample_comments.csv:/comments.csv
+      - ./data/sample_posts.csv:/posts.csv
       - ./config/config.json:/config.json
       - ./config/pipeline.json:/pipeline.json
     depends_on:

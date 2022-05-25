@@ -3,7 +3,7 @@ import os
 import re
 
 from common.middleware.middleware import Middleware
-from common.constants import FINISH_PROCESSING_TYPE
+from common.constants import FINISH_PROCESSING_TYPE, STUDENT_LIKED_POST_WITH_SCORE_AVG_HIGHER_THAN_MEAN_TYPE
 
 
 class Entity:
@@ -13,7 +13,7 @@ class Entity:
         entity_config = pipeline_config[entity_name]
         self.entity_name = entity_name
 
-        recv_post_avg_score_queue_config = pipeline_config[
+        self._recv_post_avg_score_queue_config = pipeline_config[
             "queues"][entity_config["recv_post_avg_score_queue"]]
         self._recv_joined_post_comments_queue_config = pipeline_config[
             "queues"][entity_config["recv_joined_post_comments_queue"]]
@@ -31,10 +31,6 @@ class Entity:
 
         self._post_avg_score = None
 
-        # Initialize post_avg_score consuming
-        self._middleware.start_consuming(
-            recv_post_avg_score_queue_config, self.process_post_avg_score, self.start_consuming_post_comments, self.entity_sub_id)
-
     def start_consuming_post_comments(self):
         logging.info("Finished consuming post_avg_score: {}".format(
             self._post_avg_score))
@@ -45,10 +41,15 @@ class Entity:
         self._middleware.start_consuming(
             self._recv_joined_post_comments_queue_config, self.process_post_comments, self.stop, self.entity_sub_id)
 
+    def run(self):
+        self._middleware.start_consuming(
+            self._recv_post_avg_score_queue_config, self.process_post_avg_score, self.start_consuming_post_comments, self.entity_sub_id)
+
     def stop(self):
         self._middleware.send_termination(self._send_exchanges, {
                                           "type": FINISH_PROCESSING_TYPE})
-        # TODO: finalize execution
+
+        self._middleware.stop_consuming()
 
     def process_post_avg_score(self, payload):
         self._post_avg_score = float(payload["post_avg_score"])
@@ -60,13 +61,14 @@ class Entity:
             return
 
         result = {
-            "type": "student_liked_post_with_score_avg_higher_than_mean", "post_id": post_comment["post_id"], "url": post_comment["url"], "score": post_comment["score"]}
+            "type": STUDENT_LIKED_POST_WITH_SCORE_AVG_HIGHER_THAN_MEAN_TYPE, "post_id": post_comment["post_id"], "url": post_comment["url"], "score": post_comment["score"]}
+
         # logging.debug("Result: {}".format(result))
+
         self._middleware.send(self._send_exchanges, result)
 
     def stop(self):
-
         self._middleware.send_termination(self._send_exchanges, {
                                           "type": FINISH_PROCESSING_TYPE})
 
-        # TODO: finalize execution
+        self._middleware.stop_consuming()

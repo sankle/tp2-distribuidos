@@ -1,8 +1,9 @@
 import logging
 import os
+import time
 
 from common.middleware.middleware import Middleware
-from common.constants import FINISH_PROCESSING_TYPE
+from common.constants import FINISH_PROCESSING_TYPE, COMMENT_WITH_POST_INFO_TYPE
 
 
 class Entity:
@@ -12,7 +13,7 @@ class Entity:
         entity_config = pipeline_config[entity_name]
         self.entity_name = entity_name
 
-        recv_posts_queue_config = pipeline_config["queues"][entity_config["recv_posts_queue"]]
+        self._recv_posts_queue_config = pipeline_config["queues"][entity_config["recv_posts_queue"]]
         self._recv_comments_queue_config = pipeline_config[
             "queues"][entity_config["recv_comments_queue"]]
 
@@ -26,20 +27,33 @@ class Entity:
 
         # Initialize post consuming
         self._post_map = {}
-        self._middleware.start_consuming(
-            recv_posts_queue_config, self.process_post, self.__start_consuming_comments, self.entity_sub_id)
+        self._start_time = time.time()
+        self._n_joins = 0
 
-    def __start_consuming_comments(self):
-        logging.info("Finished consuming posts: total_posts: {}".format(
-            len(self._post_map)))
+    def start_consuming_comments(self):
+        self._start_consuming_comments_time = time.time()
+
+        logging.info("Finished consuming posts: total_posts: {} time_elapsed: {} mins".format(
+            len(self._post_map), (self._start_consuming_comments_time - self._start_time) / 60))
+
+        # TODO: remove this
         os.environ["N_END_MESSAGES_EXPECTED"] = os.environ["N_END_MESSAGES_EXPECTED_FROM_COMMENTS"]
+
         self._middleware.start_consuming(
             self._recv_comments_queue_config, self.join_comment_with_post, self.stop, self.entity_sub_id)
 
+    def run(self):
+        self._middleware.start_consuming(
+            self._recv_posts_queue_config, self.process_post, self.start_consuming_comments, self.entity_sub_id)
+
     def stop(self):
+        logging.info("Finished joining comments with posts: total_joins: {} time_elapsed: {} mins".format(
+            self._n_joins, (time.time() - self._start_consuming_comments_time) / 60))
+
         self._middleware.send_termination(self._send_exchanges, {
                                           "type": FINISH_PROCESSING_TYPE})
-        # TODO: finalize execution
+
+        self._middleware.stop_consuming()
 
     def process_post(self, post):
         post_id = post["id"]
@@ -48,6 +62,7 @@ class Entity:
         self._post_map[post_id] = post
 
     def join_comment_with_post(self, comment):
+        self._n_joins += 1
         del comment["type"]
 
         post_data = self._post_map.get(comment["post_id"], None)
@@ -57,7 +72,7 @@ class Entity:
             return
 
         join_result = {**comment, **post_data}
-        join_result["type"] = "comment_with_post_info"
+        join_result["type"] = COMMENT_WITH_POST_INFO_TYPE
 
         # logging.debug("Sending joined post/comment: {}".format(join_result))
 

@@ -4,7 +4,7 @@ import re
 import time
 
 from common.basic_filter import BasicFilter
-from common.constants import FINISH_PROCESSING_TYPE
+from common.constants import FINISH_PROCESSING_TYPE, COMMENT_TYPE
 
 
 class Entity(BasicFilter):
@@ -17,14 +17,16 @@ class Entity(BasicFilter):
     def stop(self):
         logging.info("Finished: n_processed_comments: {} n_dropped_comments: {} time_elapsed: {} mins".format(
             self._n_processed_comments, self._n_dropped_comments, (time.time() - self._start_time) / 60))
+
         self._middleware.send_termination(self._send_exchanges, {
                                           "type": FINISH_PROCESSING_TYPE})
-        # TODO: finalize execution
+
+        self._middleware.stop_consuming()
 
     def callback(self, input):
         # logging.debug("Received comment: {}".format(input))
         self._n_processed_comments += 1
-        parsed_comment = {"type": "comment"}
+        parsed_comment = {"type": COMMENT_TYPE}
         keys_to_extract = ["body", "sentiment"]
 
         for k in keys_to_extract:

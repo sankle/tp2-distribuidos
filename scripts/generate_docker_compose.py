@@ -2,9 +2,9 @@
 import json
 
 # the-reddit-irl-dataset-comments.csv / sample_comments.csv
-COMMENTS_FILE = "the-reddit-irl-dataset-comments.csv"
+COMMENTS_FILE = "sample_comments.csv"
 # the-reddit-irl-dataset-posts.csv / sample_posts.csv
-POSTS_FILE = "the-reddit-irl-dataset-posts.csv"
+POSTS_FILE = "sample_posts.csv"
 
 PYTHONHASHSEED = 1
 

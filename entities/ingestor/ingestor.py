@@ -1,6 +1,7 @@
 import csv
 import logging
 import socket
+import time
 
 from common.middleware.middleware import Middleware
 from common.constants import FINISH_PROCESSING_TYPE
@@ -31,14 +32,14 @@ class Entity:
 
         self._middleware = Middleware(broker_config, pipeline_config)
 
-    def consume_callback(self, result):
+    def consume_results(self, result):
         if result['type'] == 'student_liked_post_with_score_avg_higher_than_mean':
             return
         logging.info("[{}] Received result: {}".format(
-            self.entity_name, input))
+            self.entity_name, result))
 
-    def stop_callback(self):
-        pass
+    def stop(self):
+        self._middleware.stop_consuming()
 
     def ingest_file(self, filename, exchanges):
         with open(filename, "r") as file:
@@ -63,13 +64,22 @@ class Entity:
         # while True:
         #     client_sock = self.__accept_new_connection()
         #     self.__handle_client_connection(client_sock)
+        self._start_time = time.time()
 
         self.ingest_file(POSTS_FILE, self._send_posts_exchanges)
-        self.ingest_file(COMMENTS_FILE, self._send_comments_exchanges)
+        self._finish_ingesting_posts_time = time.time()
 
-        # TODO: fix to consume 3 results instead of only one...
+        logging.info("Finished ingesting posts: time_elapsed: {} mins".format(
+            (self._finish_ingesting_posts_time - self._start_time) / 60))
+
+        self.ingest_file(COMMENTS_FILE, self._send_comments_exchanges)
+        self._finish_ingesting_comments_time = time.time()
+
+        logging.info("Finished ingesting comments: time_elapsed: {} mins".format(
+            (self._finish_ingesting_comments_time - self._finish_ingesting_posts_time) / 60))
+
         self._middleware.start_consuming(
-            self._recv_queue_config, self.consume_callback, self.stop_callback)
+            self._recv_queue_config, self.consume_results, self.stop)
 
     def __handle_client_connection(self, client_sock):
         """

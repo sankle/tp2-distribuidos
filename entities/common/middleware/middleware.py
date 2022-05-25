@@ -108,7 +108,7 @@ class Middleware:
                     logging.info("Terminating...")
                     return stop_cb()
 
-                logging.info("Received termination. Pending terminations: {}".format(
+                logging.debug("Received termination. Pending terminations: {}".format(
                     self._n_pending_end_messages[queue_name]))
                 return
 
