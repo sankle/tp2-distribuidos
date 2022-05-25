@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import json
 
-COMMENTS_FILE = "sample_comments.csv"
-POSTS_FILE = "sample_posts.csv"
+# the-reddit-irl-dataset-comments.csv / sample_comments.csv
+COMMENTS_FILE = "the-reddit-irl-dataset-comments.csv"
+# the-reddit-irl-dataset-posts.csv / sample_posts.csv
+POSTS_FILE = "the-reddit-irl-dataset-posts.csv"
 
 PYTHONHASHSEED = 1
 
@@ -22,23 +24,7 @@ services:
     networks:
       - tp2-distribuidos-net
 
-  ingestor:
-    container_name: ingestor
-    image: ingestor:latest
-    entrypoint: python3 /main.py
-    environment:
-      - PYTHONUNBUFFERED=1
-      - ENTITY_NAME=ingestor
-      - PYTHONHASHSEED=%d
-    volumes:
-      - ./data/%s:/comments.csv
-      - ./data/%s:/posts.csv
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
+  <INGESTOR>
 
   <POST_FILTERS>
 
@@ -52,13 +38,38 @@ services:
 
   <POST_MAX_AVG_SENTIMENT_FILTER>
 
+  <STUDENT_LIKED_POSTS_FILTER>
+
 networks:
   tp2-distribuidos-net:
     ipam:
       driver: default
       config:
         - subnet: 172.25.125.0/24
-""" % (PYTHONHASHSEED, COMMENTS_FILE, POSTS_FILE)
+"""
+
+INGESTOR = """
+
+  ingestor:
+    container_name: ingestor
+    image: ingestor:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENTITY_NAME=ingestor
+      - N_END_MESSAGES_EXPECTED=%d
+      - PYTHONHASHSEED=%d
+    volumes:
+      - ./data/%s:/comments.csv
+      - ./data/%s:/posts.csv
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+"""
 
 POST_FILTER = """
 
@@ -183,6 +194,28 @@ POST_MAX_AVG_SENTIMENT_FILTER = """
 
 """
 
+STUDENT_LIKED_POSTS_FILTER = """
+
+  filter_student_liked_posts_%d:
+    container_name: filter_student_liked_posts_%d
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=%d
+      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=%d
+      - N_END_MESSAGES_EXPECTED_FROM_JOINER=%d
+      - PYTHONHASHSEED=%d
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+"""
+
 
 def generate_compose():
     with open(PIPELINE_CONFIG_PATH, 'r') as pipeline_config_file:
@@ -223,13 +256,25 @@ def generate_compose():
     filter_post_max_avg_sentiment = POST_MAX_AVG_SENTIMENT_FILTER % (
         n_calculators_avg_sentiment_by_post, PYTHONHASHSEED)
 
+    n_filters_student_liked_posts = pipeline_config["filter_student_liked_posts"]["scale"]
+
+    filters_student_liked_posts = ''
+    for i in range(n_filters_student_liked_posts):
+        filters_student_liked_posts += STUDENT_LIKED_POSTS_FILTER % (
+            i, i, i, 1, n_joiners, PYTHONHASHSEED)
+
+    ingestor = INGESTOR % (
+        n_filters_student_liked_posts + 1 + 1, PYTHONHASHSEED, COMMENTS_FILE, POSTS_FILE)
+
     docker_compose = DOCKER_COMPOSE_BASE \
+        .replace("<INGESTOR>", ingestor) \
         .replace("<POST_FILTERS>", post_filters) \
         .replace("<COMMENT_FILTERS>", comment_filters) \
         .replace("<CALCULATOR_POST_AVG_SCORE>", calculator_post_avg_score) \
         .replace("<JOINERS>", joiners) \
         .replace("<CALCULATORS_AVG_SENTIMENT_BY_POST>", calculators_avg_sentiment_by_post) \
-        .replace("<POST_MAX_AVG_SENTIMENT_FILTER>", filter_post_max_avg_sentiment)
+        .replace("<POST_MAX_AVG_SENTIMENT_FILTER>", filter_post_max_avg_sentiment) \
+        .replace("<STUDENT_LIKED_POSTS_FILTER>", filters_student_liked_posts)
 
     with open(DOCKER_COMPOSE_PATH, "w") as file:
         file.write(docker_compose)

@@ -11,6 +11,8 @@ services:
     networks:
       - tp2-distribuidos-net
 
+  
+
   ingestor:
     container_name: ingestor
     image: ingestor:latest
@@ -18,16 +20,19 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - ENTITY_NAME=ingestor
+      - N_END_MESSAGES_EXPECTED=5
       - PYTHONHASHSEED=1
     volumes:
-      - ./data/sample_comments.csv:/comments.csv
-      - ./data/sample_posts.csv:/posts.csv
+      - ./data/the-reddit-irl-dataset-comments.csv:/comments.csv
+      - ./data/the-reddit-irl-dataset-posts.csv:/posts.csv
       - ./config/config.json:/config.json
       - ./config/pipeline.json:/pipeline.json
     depends_on:
       - rabbitmq
     networks:
       - tp2-distribuidos-net
+
+
 
   
 
@@ -313,6 +318,68 @@ services:
     environment:
       - ENTITY_NAME=filter_post_max_avg_sentiment
       - N_END_MESSAGES_EXPECTED=3
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  
+
+  filter_student_liked_posts_0:
+    container_name: filter_student_liked_posts_0
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=0
+      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=1
+      - N_END_MESSAGES_EXPECTED_FROM_JOINER=5
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_student_liked_posts_1:
+    container_name: filter_student_liked_posts_1
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=1
+      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=1
+      - N_END_MESSAGES_EXPECTED_FROM_JOINER=5
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_student_liked_posts_2:
+    container_name: filter_student_liked_posts_2
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=2
+      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=1
+      - N_END_MESSAGES_EXPECTED_FROM_JOINER=5
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json

@@ -2,7 +2,7 @@ import json
 
 
 class BrokerProtocol:
-    def serialize(body, attributes):
+    def serialize(body):
         # TODO: implement batches & attributes
         return json.dumps(body)
 

@@ -39,6 +39,8 @@ class Middleware:
                 time.sleep(broker_config["freq_retry_connect"])
                 continue
 
+        self._batch_size = broker_config["batch_size"]
+        self._batches = {}
         self._pipeline_config = pipeline_config
         self.__initialize_pipeline()
         self._send_strategies = {}
@@ -96,8 +98,10 @@ class Middleware:
 
         def cb_wrapper(ch, method, properties, body):
             deserialized_body = BrokerProtocol.deserialize(body)
+            # logging.debug(
+            #     "cb_wrapper: deserialized_body: {}".format(deserialized_body))
 
-            if deserialized_body["type"] == FINISH_PROCESSING_TYPE:
+            if deserialized_body.get("type") == FINISH_PROCESSING_TYPE:
                 self._n_pending_end_messages[queue_name] -= 1
 
                 if not self._n_pending_end_messages[queue_name]:
@@ -108,7 +112,8 @@ class Middleware:
                     self._n_pending_end_messages[queue_name]))
                 return
 
-            return consume_cb(deserialized_body)
+            for payload in deserialized_body["batch"]:
+                consume_cb(payload)
 
         auto_ack, exclusive = itemgetter(
             'auto_ack', 'exclusive')(queue_config)
@@ -126,8 +131,8 @@ class Middleware:
                 "name": "default"})
             n_routing_keys = self._pipeline_config["exchanges"][exchange_name].get(
                 "n_routing_keys", 1)
-            logging.debug("[Middleware] Creating strategy {} for exchange {}".format(
-                strategy, exchange_name))
+            # logging.debug("[Middleware] Creating strategy {} for exchange {}".format(
+            #     strategy, exchange_name))
             self._send_strategies[exchange_name] = StrategyBuilder.build(
                 strategy, n_routing_keys)
 
@@ -136,29 +141,58 @@ class Middleware:
 
     def __get_all_routing_keys(self, exchange_name):
         n_routing_keys = self._pipeline_config["exchanges"][exchange_name].get(
-            "n_routing_keys", 1)
-        return range(n_routing_keys)
+            "n_routing_keys")
+        if not n_routing_keys:
+            return [""]
+        return [str(routing_key) for routing_key in range(n_routing_keys)]
 
-    def __send(self, exchange_name, routing_key, raw_payload):
+    def __send_batch(self, exchange_name, batch, routing_key):
+        payload = {"batch": batch}
+        # logging.debug("sending payload: {} to routing_key: {}".format(
+        #     payload, routing_key))
+        raw_payload = BrokerProtocol.serialize(payload)
         self._channel.basic_publish(
             exchange=exchange_name, routing_key=routing_key, body=raw_payload)
 
+    def __send(self, exchange_name, routing_key, payload, wrap_in_batch=True):
+        if not wrap_in_batch:
+            raw_payload = BrokerProtocol.serialize(payload)
+            self._channel.basic_publish(
+                exchange=exchange_name, routing_key=routing_key, body=raw_payload)
+            return
+
+        batch = self._batches.get((exchange_name, routing_key), [])
+        batch.append(payload)
+
+        if len(batch) >= self._batch_size:
+            self.__send_batch(exchange_name, batch, routing_key)
+            self._batches[(exchange_name, routing_key)] = []
+        else:
+            self._batches[(exchange_name, routing_key)] = batch
+            # print("batch not sent.. self._batches: {} ".format(self._batches))
+
     def send(self, exchanges, payload):
-        for (exchange_name, attributes) in exchanges.items():
+        for exchange_name in exchanges.keys():
             routing_key = self.__get_next_routing_key(exchange_name, payload)
-            raw_payload = BrokerProtocol.serialize(payload, attributes)
 
-            logging.debug("[Middleware] sending to exchange: {} routing_key: {} batch: {}".format(
-                exchange_name, routing_key, payload))
+            # logging.debug("[Middleware] sending to exchange: {} routing_key: {} batch: {}".format(
+            #     exchange_name, routing_key, payload))
 
-            self.__send(exchange_name, routing_key, raw_payload)
+            self.__send(exchange_name, routing_key, payload, True)
 
     def send_termination(self, exchanges, payload):
         # TODO: standarize termination messages
-        raw_payload = BrokerProtocol.serialize(payload, ["type"])
+        # Check if there is a pending batch. If so, send it
         for exchange_name in exchanges.keys():
             for routing_key in self.__get_all_routing_keys(exchange_name):
-                self.__send(exchange_name, str(routing_key), raw_payload)
+                pending_batch = self._batches.get(
+                    (exchange_name, routing_key), [])
+                if len(pending_batch):
+                    self.__send_batch(
+                        exchange_name, pending_batch, routing_key)
+                    self._batches[(exchange_name, routing_key)] = []
+                self.__send(exchange_name, routing_key,
+                            payload, False)
 
     def start_consuming(self, recv_queue_config, consume_cb, stop_cb, entity_sub_id=None):
         queue_name = recv_queue_config["name"]

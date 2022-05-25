@@ -49,7 +49,16 @@ class Entity:
 
     def join_comment_with_post(self, comment):
         del comment["type"]
-        join_result = {**comment, **self._post_map[comment["post_id"]]}
+
+        post_data = self._post_map.get(comment["post_id"], None)
+        if not post_data:
+            # logging.info("dropping comment with post_id: {} because it does not have post data associated (it was filtered if existent)".format(
+            #     comment["post_id"]))
+            return
+
+        join_result = {**comment, **post_data}
         join_result["type"] = "comment_with_post_info"
-        logging.info("Sending joined post/comment: {}".format(join_result))
+
+        # logging.debug("Sending joined post/comment: {}".format(join_result))
+
         self._middleware.send(self._send_exchanges, join_result)

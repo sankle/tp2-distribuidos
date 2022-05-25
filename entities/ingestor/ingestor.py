@@ -1,6 +1,5 @@
 import csv
 import logging
-import os
 import socket
 
 from common.middleware.middleware import Middleware
@@ -32,7 +31,9 @@ class Entity:
 
         self._middleware = Middleware(broker_config, pipeline_config)
 
-    def consume_callback(self, input):
+    def consume_callback(self, result):
+        if result['type'] == 'student_liked_post_with_score_avg_higher_than_mean':
+            return
         logging.info("[{}] Received result: {}".format(
             self.entity_name, input))
 

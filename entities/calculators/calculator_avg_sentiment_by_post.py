@@ -12,8 +12,8 @@ class Entity(BasicFilter):
         self._post_sum_count = {}  # {post_id: (count, sum)}
 
     def __send_results(self):
-        logging.info("Finished processing: post_sum_count: {} n_posts_processed: {}".format(
-            self._post_sum_count, len(self._post_sum_count)))
+        logging.info("Finished processing: n_posts_processed: {}".format(
+            len(self._post_sum_count)))
         for (post_id, data) in self._post_sum_count.items():
             avg_sentiment = data[1] / data[0]
             payload = {"type": "post_avg_sentiment", "post_id": post_id,

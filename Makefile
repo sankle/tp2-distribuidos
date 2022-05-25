@@ -17,6 +17,7 @@ images: services
 	docker build -f .services/filter_posts/Dockerfile -t "filter_posts:latest" .
 	docker build -f .services/filter_comments/Dockerfile -t "filter_comments:latest" .
 	docker build -f .services/filter_post_max_avg_sentiment/Dockerfile -t "filter_post_max_avg_sentiment:latest" .
+	docker build -f .services/filter_student_liked_posts/Dockerfile -t "filter_student_liked_posts:latest" .
 	docker build -f .services/calculator_post_avg_score/Dockerfile -t "calculator_post_avg_score:latest" .
 	docker build -f .services/calculator_avg_sentiment_by_post/Dockerfile -t "calculator_avg_sentiment_by_post:latest" .
 	docker build -f .services/joiner_post_comment_by_id/Dockerfile -t "joiner_post_comment_by_id:latest" .

@@ -76,6 +76,12 @@
             "durable": false,
             "auto_delete": false
         },
+        "post_total_avg_for_filter_exchange": {
+            "name": "post_total_avg_for_filter_exchange",
+            "type": "fanout",
+            "durable": false,
+            "auto_delete": false
+        },
         "results_exchange": {
             "name": "results_exchange",
             "type": "fanout",
@@ -153,14 +159,23 @@
             "auto_ack": true,
             "bind_to_exchange": "avg_sentiment_by_post_exchange"
         },
-        "filter_students_liked_posts_queue": {
-            "name": "filter_students_liked_posts_queue",
+        "filter_student_liked_posts_queue": {
+            "name": "filter_student_liked_posts_queue",
             "durable": false,
             "exclusive": false,
             "auto_delete": false,
             "auto_ack": true,
             "bind_to_exchange": "post_comments_joined_for_filter_exchange",
-            "scale_based_on_entity": "filter_students_liked_posts"
+            "scale_based_on_entity": "filter_student_liked_posts"
+        },
+        "filter_student_liked_posts_avg_score_queue": {
+            "name": "filter_student_liked_posts_avg_score_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "post_total_avg_for_filter_exchange",
+            "scale_based_on_entity": "filter_student_liked_posts"
         }
     },
     "ingestor": {
@@ -190,7 +205,8 @@
     "calculator_post_avg_score": {
         "recv_queue": "posts_total_avg_calculator_queue",
         "send_exchanges": {
-            "results_exchange": ["type", "post_avg_score"]
+            "results_exchange": ["type", "post_avg_score"],
+            "post_total_avg_for_filter_exchange": ["type", "post_avg_score"]
         }
     },
     "joiner": {
@@ -215,8 +231,9 @@
             "results_exchange": ["type", "post_id", "url", "post_avg_sentiment"]
         }
     },
-    "filter_students_liked_posts": {
-        "recv_queue": "filter_students_liked_posts_queue",
+    "filter_student_liked_posts": {
+        "recv_post_avg_score_queue": "filter_student_liked_posts_avg_score_queue",
+        "recv_joined_post_comments_queue": "filter_student_liked_posts_queue",
         "send_exchanges": {
             "results_exchange": ["type", "post_id", "url", "score"]
         },

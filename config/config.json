@@ -3,7 +3,8 @@
     "broker_config": {
         "host": "rabbitmq",
         "n_connect_attempts": 6,
-        "freq_retry_connect": 10
+        "freq_retry_connect": 10,
+        "batch_size": 1000
     },
     "server_config": {
         "host": "ingestor",

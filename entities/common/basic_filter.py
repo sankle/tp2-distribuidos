@@ -1,7 +1,5 @@
-import logging
-import os
+import time
 
-from common.constants import FINISH_PROCESSING_TYPE
 from common.middleware.middleware import Middleware
 
 
@@ -19,5 +17,6 @@ class BasicFilter:
         self._middleware = Middleware(broker_config, pipeline_config)
 
     def run(self):
+        self._start_time = time.time()
         self._middleware.start_consuming(
             self._recv_queue_config, self.callback, self.stop_callback, self.entity_sub_id)

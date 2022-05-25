@@ -20,6 +20,7 @@ ENTITY_RELATIVE_PATHS = [
     ("filters", "filter_posts"),
     ("filters", "filter_comments"),
     ("filters", "filter_post_max_avg_sentiment"),
+    ("filters", "filter_student_liked_posts"),
     ("calculators", "calculator_post_avg_score"),
     ("calculators", "calculator_avg_sentiment_by_post"),
     ("joiner", "joiner_post_comment_by_id")
