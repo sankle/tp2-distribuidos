@@ -5,7 +5,7 @@
             "strategy": {
                 "name": "round_robin"
             },
-            "n_routing_keys": 3,
+            "n_routing_keys": 2,
             "type": "direct",
             "durable": false,
             "auto_delete": false
@@ -20,8 +20,19 @@
             "durable": false,
             "auto_delete": false
         },
-        "posts_filtered_exchange": {
-            "name": "posts_filtered_exchange",
+        "posts_filtered_for_joiner_exchange": {
+            "name": "posts_filtered_for_joiner_exchange",
+            "strategy": {
+                "name": "affinity",
+                "based_on_attribute": "id"
+            },
+            "n_routing_keys": 5,
+            "type": "direct",
+            "durable": false,
+            "auto_delete": false
+        },
+        "posts_filtered_for_calculator_exchange": {
+            "name": "posts_filtered_for_calculator_exchange",
             "type": "fanout",
             "durable": false,
             "auto_delete": false
@@ -32,7 +43,36 @@
                 "name": "affinity",
                 "based_on_attribute": "post_id"
             },
+            "n_routing_keys": 5,
             "type": "direct",
+            "durable": false,
+            "auto_delete": false
+        },
+        "post_comments_joined_for_filter_exchange": {
+            "name": "post_comments_joined_for_filter_exchange",
+            "strategy": {
+                "name": "round_robin",
+                "based_on_attribute": "post_id"
+            },
+            "n_routing_keys": 3,
+            "type": "direct",
+            "durable": false,
+            "auto_delete": false
+        },
+        "post_comments_joined_for_calculator_exchange": {
+            "name": "post_comments_joined_for_calculator_exchange",
+            "strategy": {
+                "name": "affinity",
+                "based_on_attribute": "post_id"
+            },
+            "n_routing_keys": 3,
+            "type": "direct",
+            "durable": false,
+            "auto_delete": false
+        },
+        "avg_sentiment_by_post_exchange": {
+            "name": "avg_sentiment_by_post_exchange",
+            "type": "fanout",
             "durable": false,
             "auto_delete": false
         },
@@ -76,26 +116,110 @@
             "exclusive": false,
             "auto_delete": false,
             "auto_ack": true,
-            "bind_to_exchange": "posts_filtered_exchange"
+            "bind_to_exchange": "posts_filtered_for_calculator_exchange"
+        },
+        "posts_joiner_queue": {
+            "name": "posts_joiner_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "posts_filtered_for_joiner_exchange",
+            "scale_based_on_entity": "joiner"
+        },
+        "comments_joiner_queue": {
+            "name": "comments_joiner_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "comments_filtered_exchange",
+            "scale_based_on_entity": "joiner"
+        },
+        "post_avg_sentiment_caculator_queue": {
+            "name": "post_avg_sentiment_caculator_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "post_comments_joined_for_calculator_exchange",
+            "scale_based_on_entity": "calculator_avg_sentiment_by_post"
+        },
+        "filter_post_max_avg_sentiment_queue": {
+            "name": "filter_post_max_avg_sentiment_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "avg_sentiment_by_post_exchange"
+        },
+        "filter_students_liked_posts_queue": {
+            "name": "filter_students_liked_posts_queue",
+            "durable": false,
+            "exclusive": false,
+            "auto_delete": false,
+            "auto_ack": true,
+            "bind_to_exchange": "post_comments_joined_for_filter_exchange",
+            "scale_based_on_entity": "filter_students_liked_posts"
         }
     },
     "ingestor": {
-        "send_posts_exchange": "posts_boundary_exchange",
-        "send_comments_exchange": "comments_boundary_exchange",
+        "send_posts_exchanges": {
+            "posts_boundary_exchange": ["type", "id", "subreddit.id", "subreddit.name", "subreddit.nsfw", "created_utc", "permalink", "domain", "url", "selftext", "title", "score"]
+        },
+        "send_comments_exchanges": {
+            "comments_boundary_exchange": ["type", "id", "subreddit.id", "subreddit.name", "subreddit.nsfw", "created_utc", "permalink", "body", "sentiment", "score"]
+        },
         "recv_queue": "results_queue"
     },
     "filter_posts": {
         "recv_queue": "incoming_posts_queue",
-        "send_exchange": "posts_filtered_exchange",
-        "scale": 3
+        "send_exchanges": {
+            "posts_filtered_for_joiner_exchange": ["type", "id", "url", "score"],
+            "posts_filtered_for_calculator_exchange": ["type", "score"]
+        },
+        "scale": 2
     },
     "filter_comments": {
         "recv_queue": "incoming_comments_queue",
-        "send_exchange": "comments_filtered_exchange",
+        "send_exchanges": {
+            "comments_filtered_exchange": ["type", "post_id", "body", "sentiment"]
+        },
         "scale": 3
     },
     "calculator_post_avg_score": {
         "recv_queue": "posts_total_avg_calculator_queue",
-        "send_exchange": "results_exchange"
+        "send_exchanges": {
+            "results_exchange": ["type", "post_avg_score"]
+        }
+    },
+    "joiner": {
+        "recv_posts_queue": "posts_joiner_queue",
+        "recv_comments_queue": "comments_joiner_queue",
+        "send_exchanges": {
+            "post_comments_joined_for_filter_exchange": ["post_id", "body", "url", "score"],
+            "post_comments_joined_for_calculator_exchange": ["post_id", "url", "sentiment"]
+        },
+        "scale": 5
+    },
+    "calculator_avg_sentiment_by_post": {
+        "recv_queue": "post_avg_sentiment_caculator_queue",
+        "send_exchanges": {
+            "avg_sentiment_by_post_exchange": ["type", "post_id", "avg_sentiment", "url"]
+        },
+        "scale": 3
+    },
+    "filter_post_max_avg_sentiment": {
+        "recv_queue": "filter_post_max_avg_sentiment_queue",
+        "send_exchanges": {
+            "results_exchange": ["type", "post_id", "url", "post_avg_sentiment"]
+        }
+    },
+    "filter_students_liked_posts": {
+        "recv_queue": "filter_students_liked_posts_queue",
+        "send_exchanges": {
+            "results_exchange": ["type", "post_id", "url", "score"]
+        },
+        "scale": 3
     }
 }

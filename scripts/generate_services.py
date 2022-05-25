@@ -19,7 +19,10 @@ ENTITY_RELATIVE_PATHS = [
     ("ingestor", "ingestor"),
     ("filters", "filter_posts"),
     ("filters", "filter_comments"),
-    ("calculators", "calculator_post_avg_score")
+    ("filters", "filter_post_max_avg_sentiment"),
+    ("calculators", "calculator_post_avg_score"),
+    ("calculators", "calculator_avg_sentiment_by_post"),
+    ("joiner", "joiner_post_comment_by_id")
 ]
 
 ENTITY_BASE_DOCKERFILE = """

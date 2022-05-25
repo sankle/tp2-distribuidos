@@ -20,8 +20,8 @@ class Entity:
 
         self.entity_name = entity_name
 
-        self._send_posts_exchange = pipeline_config[self.entity_name]["send_posts_exchange"]
-        self._send_comments_exchange = pipeline_config[self.entity_name]["send_comments_exchange"]
+        self._send_posts_exchanges = pipeline_config[self.entity_name]["send_posts_exchanges"]
+        self._send_comments_exchanges = pipeline_config[self.entity_name]["send_comments_exchanges"]
 
         self._recv_queue_config = pipeline_config["queues"][entity_config["recv_queue"]]
 
@@ -32,17 +32,20 @@ class Entity:
 
         self._middleware = Middleware(broker_config, pipeline_config)
 
-    def consume_callback(self, _ch, _method, _properties, input):
+    def consume_callback(self, input):
         logging.info("[{}] Received result: {}".format(
             self.entity_name, input))
 
-    def ingest_file(self, filename, exchange):
+    def stop_callback(self):
+        pass
+
+    def ingest_file(self, filename, exchanges):
         with open(filename, "r") as file:
             reader = csv.DictReader(file)
             for row in reader:
-                self._middleware.send(exchange, row)
+                self._middleware.send(exchanges, row)
 
-            self._middleware.send_termination(exchange, {
+            self._middleware.send_termination(exchanges, {
                 "type": FINISH_PROCESSING_TYPE})
 
     def run(self):
@@ -60,11 +63,12 @@ class Entity:
         #     client_sock = self.__accept_new_connection()
         #     self.__handle_client_connection(client_sock)
 
-        self.ingest_file(POSTS_FILE, self._send_posts_exchange)
-        self.ingest_file(COMMENTS_FILE, self._send_comments_exchange)
+        self.ingest_file(POSTS_FILE, self._send_posts_exchanges)
+        self.ingest_file(COMMENTS_FILE, self._send_comments_exchanges)
 
-        self._middleware.create_filter(
-            self._recv_queue_config, self.consume_callback)
+        # TODO: fix to consume 3 results instead of only one...
+        self._middleware.start_consuming(
+            self._recv_queue_config, self.consume_callback, self.stop_callback)
 
     def __handle_client_connection(self, client_sock):
         """

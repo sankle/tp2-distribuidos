@@ -1,4 +1,3 @@
-import os
 import logging
 
 from common.basic_filter import BasicFilter
@@ -17,17 +16,17 @@ class Entity(BasicFilter):
         post_avg_score = 0
 
         if self.score_count:
-            post_avg_score = self.score_sum // self.score_count
+            post_avg_score = self.score_sum / self.score_count
 
-        self._middleware.send(self._send_exchange_name, {
-            "post_avg_score": post_avg_score})
+        self._middleware.send(self._send_exchanges, {
+            "type": "result", "post_avg_score": post_avg_score})
 
-        self._middleware.send_termination(self._send_exchange_name, {
+        self._middleware.send_termination(self._send_exchanges, {
                                           "type": FINISH_PROCESSING_TYPE})
 
         # TODO: finalize execution
 
-    def callback(self, _ch, _method, _properties, input):
+    def callback(self, input):
         logging.info("[{}] Received post: {}".format(
             self.entity_name, input))
 

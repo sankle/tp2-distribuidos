@@ -1,9 +1,10 @@
-import json
 import logging
+import os
 import pika
 import time
 
 from operator import itemgetter
+from common.constants import FINISH_PROCESSING_TYPE
 from common.middleware.protocol import BrokerProtocol
 from common.middleware.send_strategies import StrategyBuilder
 
@@ -41,6 +42,8 @@ class Middleware:
         self._pipeline_config = pipeline_config
         self.__initialize_pipeline()
         self._send_strategies = {}
+        self._n_pending_end_messages = {}
+        self._consuming = False
 
     def __initialize_pipeline(self):
         """
@@ -57,16 +60,16 @@ class Middleware:
             scale_entity = queue_config.get("scale_based_on_entity")
 
             if not scale_entity:
-                self.__declare_and_bind_queue(queue_base_name, queue_config)
+                self.__declare_and_bind_queue(
+                    queue_base_name, queue_config)
                 continue
 
             n_queues = self._pipeline_config[scale_entity]["scale"]
 
-            for i in range(n_queues):
-                queue_name = "{}_{}".format(queue_base_name, i)
-                routing_key = str(i)
+            for routing_key in range(n_queues):
+                queue_name = "{}_{}".format(queue_base_name, routing_key)
                 self.__declare_and_bind_queue(
-                    queue_name, queue_config, routing_key)
+                    queue_name, queue_config, str(routing_key))
 
         logging.info("Pipeline initialized successfully")
 
@@ -87,19 +90,40 @@ class Middleware:
         self._channel.queue_bind(
             exchange=bind_to_exchange, queue=queue_name, routing_key=routing_key)
 
-    def __consume_from_queue(self, queue_name, queue_config, cb):
+    def __consume_from_queue(self, queue_name, queue_config, consume_cb, stop_cb):
+        self._n_pending_end_messages[queue_name] = int(os.environ.get(
+            "N_END_MESSAGES_EXPECTED", "1"))
+
+        def cb_wrapper(ch, method, properties, body):
+            deserialized_body = BrokerProtocol.deserialize(body)
+
+            if deserialized_body["type"] == FINISH_PROCESSING_TYPE:
+                self._n_pending_end_messages[queue_name] -= 1
+
+                if not self._n_pending_end_messages[queue_name]:
+                    logging.info("Terminating...")
+                    return stop_cb()
+
+                logging.info("Received termination. Pending terminations: {}".format(
+                    self._n_pending_end_messages[queue_name]))
+                return
+
+            return consume_cb(deserialized_body)
+
         auto_ack, exclusive = itemgetter(
             'auto_ack', 'exclusive')(queue_config)
 
         self._channel.basic_consume(
-            queue=queue_name, on_message_callback=lambda ch, method, properties, body: cb(ch, method, properties, BrokerProtocol.deserialize(body)), auto_ack=auto_ack, exclusive=exclusive)
+            queue=queue_name, on_message_callback=cb_wrapper, auto_ack=auto_ack, exclusive=exclusive)
 
-        self._channel.start_consuming()
+        if not self._consuming:
+            self._consuming = True
+            self._channel.start_consuming()
 
     def __get_next_routing_key(self, exchange_name, payload):
         if not exchange_name in self._send_strategies:
             strategy = self._pipeline_config["exchanges"][exchange_name].get("strategy", {
-                                                                             "name": "default"})
+                "name": "default"})
             n_routing_keys = self._pipeline_config["exchanges"][exchange_name].get(
                 "n_routing_keys", 1)
             logging.debug("[Middleware] Creating strategy {} for exchange {}".format(
@@ -115,26 +139,37 @@ class Middleware:
             "n_routing_keys", 1)
         return range(n_routing_keys)
 
-    def __send(self, exchange_name, routing_key, payload):
+    def __send(self, exchange_name, routing_key, raw_payload):
         self._channel.basic_publish(
-            exchange=exchange_name, routing_key=routing_key, body=BrokerProtocol.serialize(payload))
+            exchange=exchange_name, routing_key=routing_key, body=raw_payload)
 
-    def send(self, exchange_name, payload):
-        routing_key = self.__get_next_routing_key(exchange_name, payload)
+    def send(self, exchanges, payload):
+        for (exchange_name, attributes) in exchanges.items():
+            routing_key = self.__get_next_routing_key(exchange_name, payload)
+            raw_payload = BrokerProtocol.serialize(payload, attributes)
 
-        logging.debug("[Middleware] sending to exchange: {} routing_key: {} batch: {}".format(
-            exchange_name, routing_key, payload))
+            logging.debug("[Middleware] sending to exchange: {} routing_key: {} batch: {}".format(
+                exchange_name, routing_key, payload))
 
-        self.__send(exchange_name, routing_key, payload)
+            self.__send(exchange_name, routing_key, raw_payload)
 
-    def send_termination(self, exchange_name, payload):
-        for routing_key in self.__get_all_routing_keys(exchange_name):
-            self.__send(exchange_name, str(routing_key), payload)
+    def send_termination(self, exchanges, payload):
+        # TODO: standarize termination messages
+        raw_payload = BrokerProtocol.serialize(payload, ["type"])
+        for exchange_name in exchanges.keys():
+            for routing_key in self.__get_all_routing_keys(exchange_name):
+                self.__send(exchange_name, str(routing_key), raw_payload)
 
-    def create_filter(self, recv_queue_config, callback_user_method, entity_sub_id=None):
+    def start_consuming(self, recv_queue_config, consume_cb, stop_cb, entity_sub_id=None):
         queue_name = recv_queue_config["name"]
         if entity_sub_id:
             queue_name += "_{}".format(entity_sub_id)
 
         self.__consume_from_queue(
-            queue_name, recv_queue_config, callback_user_method)
+            queue_name, recv_queue_config, consume_cb, stop_cb)
+
+    def stop_consuming(self):
+        if self._consuming:
+            self._channel.stop_consuming()
+            self._consuming = False
+        self._channel.close()
