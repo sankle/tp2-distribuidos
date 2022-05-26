@@ -22,8 +22,6 @@ class Entity:
 
         self.entity_sub_id = os.environ["ENTITY_SUB_ID"]
 
-        os.environ["N_END_MESSAGES_EXPECTED"] = os.environ["N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR"]
-
         self._middleware = Middleware(broker_config, pipeline_config)
 
         self._student_regexp = re.compile(
@@ -38,7 +36,6 @@ class Entity:
         if self._post_avg_score == None:
             self.stop()
 
-        os.environ["N_END_MESSAGES_EXPECTED"] = os.environ["N_END_MESSAGES_EXPECTED_FROM_JOINER"]
         self._middleware.start_consuming(
             self._recv_joined_post_comments_queue_config, self.process_post_comments, self.stop, self.entity_sub_id)
 

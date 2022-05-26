@@ -1,0 +1,7 @@
+{
+    "filter_posts": 4,
+    "filter_comments": 4,
+    "joiner": 5,
+    "calculator_avg_sentiment_by_post": 4,
+    "filter_student_liked_posts": 4
+}

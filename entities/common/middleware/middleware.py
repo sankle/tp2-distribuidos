@@ -93,8 +93,8 @@ class Middleware:
             exchange=bind_to_exchange, queue=queue_name, routing_key=routing_key)
 
     def __consume_from_queue(self, queue_name, queue_config, consume_cb, stop_cb):
-        self._n_pending_end_messages[queue_name] = int(os.environ.get(
-            "N_END_MESSAGES_EXPECTED", "1"))
+        self._n_pending_end_messages[queue_name] = int(queue_config.get(
+            "n_end_messages", "1"))
 
         def cb_wrapper(ch, method, properties, body):
             deserialized_body = BrokerProtocol.deserialize(body)

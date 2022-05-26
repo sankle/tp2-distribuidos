@@ -80,7 +80,6 @@ INGESTOR = """
     environment:
       - PYTHONUNBUFFERED=1
       - ENTITY_NAME=ingestor
-      - N_END_MESSAGES_EXPECTED=%d
       - PYTHONHASHSEED=%d
     volumes:
       - ./data/%s:/comments.csv
@@ -144,7 +143,6 @@ CALCULATOR_POST_AVG_SCORE = """
     entrypoint: python3 /main.py
     environment:
       - ENTITY_NAME=calculator_post_avg_score
-      - N_END_MESSAGES_EXPECTED=%d
       - PYTHONHASHSEED=%d
     volumes:
       - ./config/config.json:/config.json
@@ -165,8 +163,6 @@ JOINER = """
     environment:
       - ENTITY_NAME=joiner
       - ENTITY_SUB_ID=%d
-      - N_END_MESSAGES_EXPECTED_FROM_POSTS=%d
-      - N_END_MESSAGES_EXPECTED_FROM_COMMENTS=%d
       - PYTHONHASHSEED=%d
     volumes:
       - ./config/config.json:/config.json
@@ -187,7 +183,6 @@ CALCULATOR_AVG_SENTIMENT_BY_POST = """
     environment:
       - ENTITY_NAME=calculator_avg_sentiment_by_post
       - ENTITY_SUB_ID=%d
-      - N_END_MESSAGES_EXPECTED=%d
       - PYTHONHASHSEED=%d
     volumes:
       - ./config/config.json:/config.json
@@ -207,7 +202,6 @@ POST_MAX_AVG_SENTIMENT_FILTER = """
     entrypoint: python3 /main.py
     environment:
       - ENTITY_NAME=filter_post_max_avg_sentiment
-      - N_END_MESSAGES_EXPECTED=%d
       - PYTHONHASHSEED=%d
     volumes:
       - ./config/config.json:/config.json
@@ -228,8 +222,6 @@ STUDENT_LIKED_POSTS_FILTER = """
     environment:
       - ENTITY_NAME=filter_student_liked_posts
       - ENTITY_SUB_ID=%d
-      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=%d
-      - N_END_MESSAGES_EXPECTED_FROM_JOINER=%d
       - PYTHONHASHSEED=%d
     volumes:
       - ./config/config.json:/config.json
@@ -260,15 +252,13 @@ def generate_compose():
         post_filters += COMMENT_FILTER % (
             i, i, i, PYTHONHASHSEED)
 
-    calculator_post_avg_score = CALCULATOR_POST_AVG_SCORE % (
-        n_post_filters, PYTHONHASHSEED)
+    calculator_post_avg_score = CALCULATOR_POST_AVG_SCORE % (PYTHONHASHSEED)
 
     n_joiners = pipeline_config["joiner"]["scale"]
 
     joiners = ""
     for i in range(n_joiners):
-        joiners += JOINER % (i, i, i, n_post_filters,
-                             n_comment_filters, PYTHONHASHSEED)
+        joiners += JOINER % (i, i, i, PYTHONHASHSEED)
 
     n_calculators_avg_sentiment_by_post = pipeline_config[
         "calculator_avg_sentiment_by_post"]["scale"]
@@ -276,20 +266,19 @@ def generate_compose():
     calculators_avg_sentiment_by_post = ""
     for i in range(n_calculators_avg_sentiment_by_post):
         calculator_post_avg_score += CALCULATOR_AVG_SENTIMENT_BY_POST % (
-            i, i, i, n_joiners, PYTHONHASHSEED)
+            i, i, i, PYTHONHASHSEED)
 
     filter_post_max_avg_sentiment = POST_MAX_AVG_SENTIMENT_FILTER % (
-        n_calculators_avg_sentiment_by_post, PYTHONHASHSEED)
+        PYTHONHASHSEED)
 
     n_filters_student_liked_posts = pipeline_config["filter_student_liked_posts"]["scale"]
 
     filters_student_liked_posts = ''
     for i in range(n_filters_student_liked_posts):
         filters_student_liked_posts += STUDENT_LIKED_POSTS_FILTER % (
-            i, i, i, 1, n_joiners, PYTHONHASHSEED)
+            i, i, i, PYTHONHASHSEED)
 
-    ingestor = INGESTOR % (
-        n_filters_student_liked_posts + 1 + 1, PYTHONHASHSEED, COMMENTS_FILE, POSTS_FILE)
+    ingestor = INGESTOR % (PYTHONHASHSEED, COMMENTS_FILE, POSTS_FILE)
 
     docker_compose = DOCKER_COMPOSE_BASE \
         .replace("<CLIENT>", CLIENT) \

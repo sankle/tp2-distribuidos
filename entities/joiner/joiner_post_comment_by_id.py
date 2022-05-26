@@ -21,8 +21,6 @@ class Entity:
 
         self.entity_sub_id = os.environ["ENTITY_SUB_ID"]
 
-        os.environ["N_END_MESSAGES_EXPECTED"] = os.environ["N_END_MESSAGES_EXPECTED_FROM_POSTS"]
-
         self._middleware = Middleware(broker_config, pipeline_config)
 
         # Initialize post consuming
@@ -35,9 +33,6 @@ class Entity:
 
         logging.info("Finished consuming posts: total_posts: {} time_elapsed: {} mins".format(
             len(self._post_map), (self._start_consuming_comments_time - self._start_time) / 60))
-
-        # TODO: remove this
-        os.environ["N_END_MESSAGES_EXPECTED"] = os.environ["N_END_MESSAGES_EXPECTED_FROM_COMMENTS"]
 
         self._middleware.start_consuming(
             self._recv_comments_queue_config, self.join_comment_with_post, self.stop, self.entity_sub_id)

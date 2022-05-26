@@ -41,7 +41,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - ENTITY_NAME=ingestor
-      - N_END_MESSAGES_EXPECTED=5
       - PYTHONHASHSEED=1
     volumes:
       - ./data/the-reddit-irl-dataset-comments.csv:/comments.csv
@@ -95,6 +94,24 @@ services:
 
 
 
+  filter_posts_2:
+    container_name: filter_posts_2
+    image: filter_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_posts
+      - ENTITY_SUB_ID=2
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
   filter_comments_0:
     container_name: filter_comments_0
     image: filter_comments:latest
@@ -131,24 +148,6 @@ services:
 
 
 
-  filter_comments_2:
-    container_name: filter_comments_2
-    image: filter_comments:latest
-    entrypoint: python3 /main.py
-    environment:
-      - ENTITY_NAME=filter_comments
-      - ENTITY_SUB_ID=2
-      - PYTHONHASHSEED=1
-    volumes:
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
-
-
-
   
 
   
@@ -159,7 +158,6 @@ services:
     entrypoint: python3 /main.py
     environment:
       - ENTITY_NAME=calculator_post_avg_score
-      - N_END_MESSAGES_EXPECTED=2
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -178,7 +176,6 @@ services:
     environment:
       - ENTITY_NAME=calculator_avg_sentiment_by_post
       - ENTITY_SUB_ID=0
-      - N_END_MESSAGES_EXPECTED=5
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -197,26 +194,6 @@ services:
     environment:
       - ENTITY_NAME=calculator_avg_sentiment_by_post
       - ENTITY_SUB_ID=1
-      - N_END_MESSAGES_EXPECTED=5
-      - PYTHONHASHSEED=1
-    volumes:
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
-
-
-
-  calculator_avg_sentiment_by_post_2:
-    container_name: calculator_avg_sentiment_by_post_2
-    image: calculator_avg_sentiment_by_post:latest
-    entrypoint: python3 /main.py
-    environment:
-      - ENTITY_NAME=calculator_avg_sentiment_by_post
-      - ENTITY_SUB_ID=2
-      - N_END_MESSAGES_EXPECTED=5
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -237,8 +214,6 @@ services:
     environment:
       - ENTITY_NAME=joiner
       - ENTITY_SUB_ID=0
-      - N_END_MESSAGES_EXPECTED_FROM_POSTS=2
-      - N_END_MESSAGES_EXPECTED_FROM_COMMENTS=3
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -257,8 +232,6 @@ services:
     environment:
       - ENTITY_NAME=joiner
       - ENTITY_SUB_ID=1
-      - N_END_MESSAGES_EXPECTED_FROM_POSTS=2
-      - N_END_MESSAGES_EXPECTED_FROM_COMMENTS=3
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -277,8 +250,6 @@ services:
     environment:
       - ENTITY_NAME=joiner
       - ENTITY_SUB_ID=2
-      - N_END_MESSAGES_EXPECTED_FROM_POSTS=2
-      - N_END_MESSAGES_EXPECTED_FROM_COMMENTS=3
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -297,28 +268,6 @@ services:
     environment:
       - ENTITY_NAME=joiner
       - ENTITY_SUB_ID=3
-      - N_END_MESSAGES_EXPECTED_FROM_POSTS=2
-      - N_END_MESSAGES_EXPECTED_FROM_COMMENTS=3
-      - PYTHONHASHSEED=1
-    volumes:
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
-
-
-
-  joiner_4:
-    container_name: joiner_4
-    image: joiner_post_comment_by_id:latest
-    entrypoint: python3 /main.py
-    environment:
-      - ENTITY_NAME=joiner
-      - ENTITY_SUB_ID=4
-      - N_END_MESSAGES_EXPECTED_FROM_POSTS=2
-      - N_END_MESSAGES_EXPECTED_FROM_COMMENTS=3
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -340,7 +289,6 @@ services:
     entrypoint: python3 /main.py
     environment:
       - ENTITY_NAME=filter_post_max_avg_sentiment
-      - N_END_MESSAGES_EXPECTED=3
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -361,48 +309,6 @@ services:
     environment:
       - ENTITY_NAME=filter_student_liked_posts
       - ENTITY_SUB_ID=0
-      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=1
-      - N_END_MESSAGES_EXPECTED_FROM_JOINER=5
-      - PYTHONHASHSEED=1
-    volumes:
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
-
-
-
-  filter_student_liked_posts_1:
-    container_name: filter_student_liked_posts_1
-    image: filter_student_liked_posts:latest
-    entrypoint: python3 /main.py
-    environment:
-      - ENTITY_NAME=filter_student_liked_posts
-      - ENTITY_SUB_ID=1
-      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=1
-      - N_END_MESSAGES_EXPECTED_FROM_JOINER=5
-      - PYTHONHASHSEED=1
-    volumes:
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
-
-
-
-  filter_student_liked_posts_2:
-    container_name: filter_student_liked_posts_2
-    image: filter_student_liked_posts:latest
-    entrypoint: python3 /main.py
-    environment:
-      - ENTITY_NAME=filter_student_liked_posts
-      - ENTITY_SUB_ID=2
-      - N_END_MESSAGES_EXPECTED_FROM_POST_AVG_SCORE_CALCULATOR=1
-      - N_END_MESSAGES_EXPECTED_FROM_JOINER=5
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json

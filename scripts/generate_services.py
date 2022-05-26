@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+
+##################################################################
+#                                                                #
+# This script automatically generates the services, in .services #
+# directory, with all the needed settings and files.             #
+#                                                                #
+# It also generates the Makefile automatically                   #
+#                                                                #
+##################################################################
+
 import shutil
 
 SERVICES_DIRECTORY = "../.services"
