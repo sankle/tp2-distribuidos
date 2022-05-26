@@ -181,7 +181,6 @@ class Middleware:
             self.__send(exchange_name, routing_key, payload, True)
 
     def send_termination(self, exchanges, payload):
-        # TODO: standarize termination messages
         # Check if there is a pending batch. If so, send it
         for exchange_name in exchanges.keys():
             for routing_key in self.__get_all_routing_keys(exchange_name):

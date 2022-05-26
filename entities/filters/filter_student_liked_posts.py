@@ -30,6 +30,7 @@ class Entity:
             "(?:university|college|student|teacher|professor)", flags=re.IGNORECASE)
 
         self._post_avg_score = None
+        self._posts_already_sent = set()
 
     def start_consuming_post_comments(self):
         logging.info("Finished consuming post_avg_score: {}".format(
@@ -55,8 +56,8 @@ class Entity:
         self._post_avg_score = float(payload["post_avg_score"])
 
     def process_post_comments(self, post_comment):
-        if float(post_comment["score"]) <= self._post_avg_score:
-            # logging.debug("discarding post_comment {} with score {} < post_avg_score {}".format(
+        if float(post_comment["score"]) <= self._post_avg_score or post_comment["post_id"] in self._posts_already_sent:
+            # logging.debug("discarding post_comment {}".format(
             # post_comment, post_comment["score"], self._post_avg_score))
             return
 
@@ -64,7 +65,7 @@ class Entity:
             "type": STUDENT_LIKED_POST_WITH_SCORE_AVG_HIGHER_THAN_MEAN_TYPE, "post_id": post_comment["post_id"], "url": post_comment["url"], "score": post_comment["score"]}
 
         # logging.debug("Result: {}".format(result))
-
+        self._posts_already_sent.add(post_comment["post_id"])
         self._middleware.send(self._send_exchanges, result)
 
     def stop(self):

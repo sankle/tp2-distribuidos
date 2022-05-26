@@ -51,7 +51,7 @@
         "post_comments_joined_for_filter_exchange": {
             "name": "post_comments_joined_for_filter_exchange",
             "strategy": {
-                "name": "round_robin",
+                "name": "affinity",
                 "based_on_attribute": "post_id"
             },
             "n_routing_keys": 3,

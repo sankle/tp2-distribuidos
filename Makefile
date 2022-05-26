@@ -13,6 +13,7 @@ services:
 images: services
 	docker build -f ./base/images/python-base.dockerfile -t "rabbitmq-python-base:0.0.1" .
 	docker build -f ./rabbitmq/Dockerfile -t "rabbitmq:latest" .
+	docker build -f ./entities/client/Dockerfile -t "client:latest" .
 	docker build -f .services/ingestor/Dockerfile -t "ingestor:latest" .
 	docker build -f .services/filter_posts/Dockerfile -t "filter_posts:latest" .
 	docker build -f .services/filter_comments/Dockerfile -t "filter_comments:latest" .
@@ -22,7 +23,6 @@ images: services
 	docker build -f .services/calculator_avg_sentiment_by_post/Dockerfile -t "calculator_avg_sentiment_by_post:latest" .
 	docker build -f .services/joiner_post_comment_by_id/Dockerfile -t "joiner_post_comment_by_id:latest" .
 	
-	# docker build -f ./client/Dockerfile -t "client:latest" .
 .PHONY: images
 
 up: images

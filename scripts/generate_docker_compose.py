@@ -2,9 +2,9 @@
 import json
 
 # the-reddit-irl-dataset-comments.csv / sample_comments.csv
-COMMENTS_FILE = "sample_comments.csv"
+COMMENTS_FILE = "the-reddit-irl-dataset-comments.csv"
 # the-reddit-irl-dataset-posts.csv / sample_posts.csv
-POSTS_FILE = "sample_posts.csv"
+POSTS_FILE = "the-reddit-irl-dataset-posts.csv"
 
 PYTHONHASHSEED = 1
 
@@ -23,6 +23,8 @@ services:
       - 15672:15672
     networks:
       - tp2-distribuidos-net
+
+  <CLIENT>
 
   <INGESTOR>
 
@@ -48,6 +50,27 @@ networks:
         - subnet: 172.25.125.0/24
 """
 
+CLIENT = """
+
+  client:
+    container_name: client
+    image: client:latest
+    entrypoint: python3 /client.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENTITY_NAME=client
+    volumes:
+      - ./data/%s:/comments.csv
+      - ./data/%s:/posts.csv
+      - ./config/config.json:/config.json
+      - ./results/:/results/
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+""" % (COMMENTS_FILE, POSTS_FILE)
+
 INGESTOR = """
 
   ingestor:
@@ -64,8 +87,10 @@ INGESTOR = """
       - ./data/%s:/posts.csv
       - ./config/config.json:/config.json
       - ./config/pipeline.json:/pipeline.json
+      - ./img/:/img/
     depends_on:
       - rabbitmq
+      - client
     networks:
       - tp2-distribuidos-net
 
@@ -267,6 +292,7 @@ def generate_compose():
         n_filters_student_liked_posts + 1 + 1, PYTHONHASHSEED, COMMENTS_FILE, POSTS_FILE)
 
     docker_compose = DOCKER_COMPOSE_BASE \
+        .replace("<CLIENT>", CLIENT) \
         .replace("<INGESTOR>", ingestor) \
         .replace("<POST_FILTERS>", post_filters) \
         .replace("<COMMENT_FILTERS>", comment_filters) \

@@ -13,6 +13,27 @@ services:
 
   
 
+  client:
+    container_name: client
+    image: client:latest
+    entrypoint: python3 /client.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENTITY_NAME=client
+    volumes:
+      - ./data/the-reddit-irl-dataset-comments.csv:/comments.csv
+      - ./data/the-reddit-irl-dataset-posts.csv:/posts.csv
+      - ./config/config.json:/config.json
+      - ./results/:/results/
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  
+
   ingestor:
     container_name: ingestor
     image: ingestor:latest
@@ -23,12 +44,14 @@ services:
       - N_END_MESSAGES_EXPECTED=5
       - PYTHONHASHSEED=1
     volumes:
-      - ./data/sample_comments.csv:/comments.csv
-      - ./data/sample_posts.csv:/posts.csv
+      - ./data/the-reddit-irl-dataset-comments.csv:/comments.csv
+      - ./data/the-reddit-irl-dataset-posts.csv:/posts.csv
       - ./config/config.json:/config.json
       - ./config/pipeline.json:/pipeline.json
+      - ./img/:/img/
     depends_on:
       - rabbitmq
+      - client
     networks:
       - tp2-distribuidos-net
 

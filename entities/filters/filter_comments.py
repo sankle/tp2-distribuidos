@@ -30,7 +30,6 @@ class Entity(BasicFilter):
         keys_to_extract = ["body", "sentiment"]
 
         for k in keys_to_extract:
-            # TODO: verify filter invalid criteria
             v = input.get(k)
             if not v:
                 # logging.info(

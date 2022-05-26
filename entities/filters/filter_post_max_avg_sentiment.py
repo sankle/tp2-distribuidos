@@ -28,6 +28,11 @@ class Entity(BasicFilter):
     def callback(self, input):
         # logging.info("input: {}, _max_avg_sentiment_post: {}, value: {}".format(
         # input, self._max_avg_sentiment_post, self._max_avg_sentiment_post[2]))
+
+        # filter posts without url
+        if not input["url"]:
+            return
+
         input_max_avg_sentiment = float(input["avg_sentiment"])
         if self._max_avg_sentiment_post[2] == None or self._max_avg_sentiment_post[2] < input_max_avg_sentiment:
             self._max_avg_sentiment_post = (

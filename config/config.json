@@ -8,7 +8,7 @@
     },
     "server_config": {
         "host": "ingestor",
-        "port": 12345,
+        "port": 12346,
         "listen_backlog": 1
     }
 }

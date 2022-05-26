@@ -50,8 +50,8 @@ services:
 images: services
 	docker build -f ./base/images/python-base.dockerfile -t "rabbitmq-python-base:0.0.1" .
 	docker build -f ./rabbitmq/Dockerfile -t "rabbitmq:latest" .
+	docker build -f ./entities/client/Dockerfile -t "client:latest" .
 	<SERVICE_BUILD_COMMANDS>
-	# docker build -f ./client/Dockerfile -t "client:latest" .
 .PHONY: images
 
 up: images

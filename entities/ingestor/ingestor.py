@@ -1,14 +1,20 @@
 import csv
 import logging
+import requests
+import re
 import socket
 import time
+import common.cs_protocol
 
 from common.middleware.middleware import Middleware
-from common.constants import FINISH_PROCESSING_TYPE
-
+from common.constants import FINISH_PROCESSING_TYPE, STUDENT_LIKED_POST_WITH_SCORE_AVG_HIGHER_THAN_MEAN_TYPE, POST_AVG_SCORE_TYPE, POST_WITH_MAX_AVG_SENTIMENT_TYPE
+from mimetypes import guess_extension
 
 POSTS_FILE = '/posts.csv'
 COMMENTS_FILE = '/comments.csv'
+
+SAVE_FILE = True
+SAVE_FILE_PATH = '/img'
 
 
 class Entity:
@@ -30,25 +36,49 @@ class Entity:
         self._server_socket.bind(('', server_config["port"]))
         self._server_socket.listen(server_config["listen_backlog"])
 
+        logging.info("Listening on {}".format(server_config["port"]))
+
         self._middleware = Middleware(broker_config, pipeline_config)
 
+        self._ingesting_posts = False
+        self._ingesting_comments = False
+
     def consume_results(self, result):
-        if result['type'] == 'student_liked_post_with_score_avg_higher_than_mean':
+        if result['type'] == POST_WITH_MAX_AVG_SENTIMENT_TYPE:
+            logging.info(
+                "Received result post_with_max_avg_sentiment_type: {}".format(result))
+            self.__download_and_send_post_with_max_avg_sentiment(result)
             return
-        logging.info("[{}] Received result: {}".format(
-            self.entity_name, result))
+
+        common.cs_protocol.send(self._client_sock, result)
 
     def stop(self):
+        termination_msg = {
+            "type": FINISH_PROCESSING_TYPE}
+
+        if self._ingesting_posts:
+            self._middleware.send_termination(
+                self._send_posts_exchanges, termination_msg)
+            self._middleware.send_termination(
+                self._send_comments_exchanges, termination_msg)
+
+        if self._ingesting_comments:
+            self._middleware.send_termination(
+                self._send_comments_exchanges, termination_msg)
+
+        common.cs_protocol.send(self._client_sock, termination_msg)
+
         self._middleware.stop_consuming()
+        self._client_sock.close()
 
-    def ingest_file(self, filename, exchanges):
-        with open(filename, "r") as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                self._middleware.send(exchanges, row)
+    def __ingest(self, exchanges):
+        post = common.cs_protocol.recv(self._client_sock)
+        while post["type"] != FINISH_PROCESSING_TYPE:
+            self._middleware.send(exchanges, post)
+            post = common.cs_protocol.recv(self._client_sock)
 
-            self._middleware.send_termination(exchanges, {
-                "type": FINISH_PROCESSING_TYPE})
+        self._middleware.send_termination(
+            exchanges, {"type": FINISH_PROCESSING_TYPE})
 
     def run(self):
         """
@@ -58,21 +88,21 @@ class Entity:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
+        self._client_sock = self.__accept_new_connection()
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
-        # while True:
-        #     client_sock = self.__accept_new_connection()
-        #     self.__handle_client_connection(client_sock)
         self._start_time = time.time()
 
-        self.ingest_file(POSTS_FILE, self._send_posts_exchanges)
+        self._ingesting_posts = True
+        self.__ingest(self._send_posts_exchanges)
+        self._ingesting_posts = False
         self._finish_ingesting_posts_time = time.time()
 
         logging.info("Finished ingesting posts: time_elapsed: {} mins".format(
             (self._finish_ingesting_posts_time - self._start_time) / 60))
 
-        self.ingest_file(COMMENTS_FILE, self._send_comments_exchanges)
+        self._ingesting_comments = True
+        self.__ingest(self._send_comments_exchanges)
+        self._ingesting_comments = False
         self._finish_ingesting_comments_time = time.time()
 
         logging.info("Finished ingesting comments: time_elapsed: {} mins".format(
@@ -81,35 +111,40 @@ class Entity:
         self._middleware.start_consuming(
             self._recv_queue_config, self.consume_results, self.stop)
 
-    def __handle_client_connection(self, client_sock):
-        """
-        Read message from a specific client socket and closes the socket
-
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
-        try:
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            logging.info(
-                'Message received from connection {}. Msg: {}'
-                .format(client_sock.getpeername(), msg))
-            client_sock.send(
-                "Your Message has been received: {}\n".format(msg).encode('utf-8'))
-        except OSError:
-            logging.info("Error while reading socket {}".format(client_sock))
-        finally:
-            client_sock.close()
-
     def __accept_new_connection(self):
-        """
-        Accept new connections
-
-        Function blocks until a connection to a client is made.
-        Then connection created is printed and returned
-        """
-
-        # Connection arrived
         logging.info("Proceed to accept new connections")
         c, addr = self._server_socket.accept()
         logging.info('Got connection from {}'.format(addr))
         return c
+
+    def __download_and_send_post_with_max_avg_sentiment(self, result):
+        url = result["url"]
+
+        try:
+            r = requests.get(url, allow_redirects=True)
+
+            if r.status_code != 200:
+                logging.error(
+                    "Could not download img of post_with_max_avg_sentiment: {}".format(
+                        result))
+                common.cs_protocol.send(self._client_sock, result)
+                return
+
+            file_ext = guess_extension(
+                r.headers['content-type'].partition(';')[0].strip())
+
+            if not file_ext:
+                file_ext = ".unknown"
+
+            result["ext"] = file_ext
+            result["file_length"] = len(r.content)
+
+            logging.info("Image downloaded successfully")
+
+            common.cs_protocol.send(self._client_sock, result)
+            common.cs_protocol.send_img(self._client_sock, r.content)
+        except:
+            logging.error(
+                "Could not download img of post_with_max_avg_sentiment: {}".format(result))
+            common.cs_protocol.send(self._client_sock, result)
+            return
