@@ -92,7 +92,9 @@ def scale_pipeline():
 
 
 def main():
+    print("Scaling pipeline according to scale.json")
     scale_pipeline()
+    print("Pipeline scaled successfully!")
 
 
 if __name__ == "__main__":

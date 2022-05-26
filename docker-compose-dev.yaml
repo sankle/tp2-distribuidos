@@ -94,24 +94,6 @@ services:
 
 
 
-  filter_posts_2:
-    container_name: filter_posts_2
-    image: filter_posts:latest
-    entrypoint: python3 /main.py
-    environment:
-      - ENTITY_NAME=filter_posts
-      - ENTITY_SUB_ID=2
-      - PYTHONHASHSEED=1
-    volumes:
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
-
-
-
   filter_comments_0:
     container_name: filter_comments_0
     image: filter_comments:latest
@@ -137,6 +119,24 @@ services:
     environment:
       - ENTITY_NAME=filter_comments
       - ENTITY_SUB_ID=1
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_comments_2:
+    container_name: filter_comments_2
+    image: filter_comments:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_comments
+      - ENTITY_SUB_ID=2
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json
@@ -205,6 +205,42 @@ services:
 
 
 
+  calculator_avg_sentiment_by_post_2:
+    container_name: calculator_avg_sentiment_by_post_2
+    image: calculator_avg_sentiment_by_post:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=calculator_avg_sentiment_by_post
+      - ENTITY_SUB_ID=2
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  calculator_avg_sentiment_by_post_3:
+    container_name: calculator_avg_sentiment_by_post_3
+    image: calculator_avg_sentiment_by_post:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=calculator_avg_sentiment_by_post
+      - ENTITY_SUB_ID=3
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
   
 
   joiner_0:
@@ -261,24 +297,6 @@ services:
 
 
 
-  joiner_3:
-    container_name: joiner_3
-    image: joiner_post_comment_by_id:latest
-    entrypoint: python3 /main.py
-    environment:
-      - ENTITY_NAME=joiner
-      - ENTITY_SUB_ID=3
-      - PYTHONHASHSEED=1
-    volumes:
-      - ./config/config.json:/config.json
-      - ./config/pipeline.json:/pipeline.json
-    depends_on:
-      - rabbitmq
-    networks:
-      - tp2-distribuidos-net
-
-
-
   
 
   
@@ -309,6 +327,78 @@ services:
     environment:
       - ENTITY_NAME=filter_student_liked_posts
       - ENTITY_SUB_ID=0
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_student_liked_posts_1:
+    container_name: filter_student_liked_posts_1
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=1
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_student_liked_posts_2:
+    container_name: filter_student_liked_posts_2
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=2
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_student_liked_posts_3:
+    container_name: filter_student_liked_posts_3
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=3
+      - PYTHONHASHSEED=1
+    volumes:
+      - ./config/config.json:/config.json
+      - ./config/pipeline.json:/pipeline.json
+    depends_on:
+      - rabbitmq
+    networks:
+      - tp2-distribuidos-net
+
+
+
+  filter_student_liked_posts_4:
+    container_name: filter_student_liked_posts_4
+    image: filter_student_liked_posts:latest
+    entrypoint: python3 /main.py
+    environment:
+      - ENTITY_NAME=filter_student_liked_posts
+      - ENTITY_SUB_ID=4
       - PYTHONHASHSEED=1
     volumes:
       - ./config/config.json:/config.json

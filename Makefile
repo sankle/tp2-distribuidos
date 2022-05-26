@@ -7,7 +7,7 @@ PWD := $(shell pwd)
 default: build
 
 services:
-	cd $(PWD)/scripts && python3 generate_docker_compose.py && python3 generate_services.py
+	cd $(PWD)/scripts && python3 scale_pipeline.py && python3 generate_docker_compose.py && python3 generate_services.py
 .PHONY: services
 
 images: services
