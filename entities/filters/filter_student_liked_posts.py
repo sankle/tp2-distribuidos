@@ -53,7 +53,7 @@ class Entity:
         self._post_avg_score = float(payload["post_avg_score"])
 
     def process_post_comments(self, post_comment):
-        if float(post_comment["score"]) <= self._post_avg_score or post_comment["post_id"] in self._posts_already_sent:
+        if float(post_comment["score"]) <= self._post_avg_score or post_comment["post_id"] in self._posts_already_sent or len(self._student_regexp.findall(post_comment["body"])) == 0:
             # logging.debug("discarding post_comment {}".format(
             # post_comment, post_comment["score"], self._post_avg_score))
             return
