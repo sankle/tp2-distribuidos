@@ -1,4 +1,4 @@
-# Trabajo Práctico II - Sistemas Distribuidos - FIUBA
+# Assignment II - Distributed Systems - Faculty of Engineering, University of Buenos Aires
 
 ## Runbook
 
